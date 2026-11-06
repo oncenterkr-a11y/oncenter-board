@@ -422,7 +422,7 @@ const STAGES = [
   { color: "무지개", word: "즐거움", say: "모든 색이 모인 '온', 몸을 다양하게 쓰며 즐기는 아이" },
 ];
 function keyHero(k){
-  const n = k.level || 0, cur = n ? STAGES[n - 1] : null, nxt = n < STAGES.length ? STAGES[n] : null;
+  const n = k.keyLevel ?? k.level ?? 0, cur = n ? STAGES[n - 1] : null, nxt = n < STAGES.length ? STAGES[n] : null;
   const left = Math.max(0, MAIN.goal - k.stamps);
   const nextLine = !nxt ? "6단계를 모두 모았어요! 무지개 완성 🌈"
     : k.key ? `이번 시즌 레벨업! 다음 시즌부터 <b>${nxt.color}</b>를 향해 다시 모아요`
@@ -445,12 +445,12 @@ function keyIcon(color){
     ${color ? '<circle cx="20" cy="25" r="3.5" fill="#FF8A00" stroke="rgba(0,0,0,.25)"/>' : ""}</svg>`;
 }
 function levelBoard(k){
-  const n = k.level || 0;
+  const n = k.keyLevel ?? k.level ?? 0;
   const cells = STAGES.map((st, i) => {
     const got = k.levels && k.levels[i];
-    const cls = got ? "got" : i === n ? "now" : "next";
+    const cls = got || i < n ? "got" : i === n ? "now" : "next";
     const note = got ? `${got.season.slice(5)}<br>받음` : i === n ? `${k.key ? 0 : k.stamps}/${MAIN.goal}` : "";
-    return `<div class="kr ${cls}">${keyIcon(got ? st.color : null)}<b>${i + 1}단계 ${st.color}</b><span>${note}</span></div>`;
+    return `<div class="kr ${cls}">${keyIcon(got || i < n ? st.color : null)}<b>${i + 1}단계 ${st.color}</b><span>${note}</span></div>`;
   }).join("");
   const hist = (k.history || []).slice().reverse().map(h => `<li><span>${esc(h.label)} · ${h.leveled ? `<span class="pass">${esc(h.color)} 레벨업!</span>` : `스탬프 ${h.gained}개 · 다음 시즌으로 이어짐`}</span><span>+${h.gained}</span></li>`).join("");
   return `<section><h3>키링 단계 ${n}/${STAGES.length}</h3><div class="keys">${cells}</div><div class="legend">스탬프 ${MAIN.goal}개를 모을 때마다 한 단계씩 올라가요. 시즌 안에 못 채우면 다음 시즌에 이어서 모아요.</div></section>
