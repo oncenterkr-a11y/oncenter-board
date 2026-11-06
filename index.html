@@ -129,10 +129,22 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 .sheet h2{font-size:30px}
 .x{border:1px solid var(--line);background:var(--sunken);border-radius:999px;width:36px;height:36px;cursor:pointer;flex:none}
 .sheet h3{font-size:17px;margin-bottom:8px}
-.trail{display:flex;gap:6px;flex-wrap:wrap}
-.trail i{width:26px;height:26px;border-radius:8px;background:var(--sunken);display:grid;place-items:center;font-style:normal;font-size:10px;color:var(--muted)}
-.trail i.y{background:var(--mat);color:#fff}
-.trail i.c{box-shadow:inset 0 0 0 2px var(--ink)}
+.cal{max-width:440px}
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.calhead b{font-size:16px;font-variant-numeric:tabular-nums}
+.calnav{width:40px;height:40px;flex:none;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:inherit;font-size:18px;cursor:pointer}
+.calnav:disabled{opacity:.35;cursor:default}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.calgrid span{padding:2px 0;text-align:center;font-size:11px;font-weight:600;color:var(--muted)}
+.calgrid i{position:relative;aspect-ratio:1;border-radius:10px;background:var(--sunken);display:grid;place-items:center;font-style:normal;font-size:13px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.calgrid i.blank,.calgrid i.off,.calgrid i.later{background:none}
+.calgrid i.off,.calgrid i.later{color:var(--muted)}
+.calgrid i.later{opacity:.55}
+.calgrid i.y{background:var(--mat);color:var(--surface);font-weight:700}
+.calgrid i.n{background:var(--ink-soft);color:var(--ink);text-decoration:line-through}
+.calgrid i.c{box-shadow:inset 0 0 0 3px var(--ink)}
+.calgrid i.now::after{content:"";position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:currentColor}
+.calsum{margin-top:8px;font-size:13px;font-weight:600}
 .legend{font-size:12px;color:var(--muted);margin-top:6px}
 .list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
 .list li{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;background:var(--sunken);border-radius:10px;font-size:14px}
@@ -343,10 +355,33 @@ function showMine(){
   $("#mine").innerHTML = FOUND.map(mineHTML).join("");
   $("#pinNote").hidden = !START_PIN;
 }
-function mineHTML(k){
+// 출석 달력: one month at a time. ‹ › walks from the kid's first record to the latest update.
+const pad2 = n => String(n).padStart(2, "0");
+const shiftMonth = (ym, step) => { const [y, m] = ym.split("-").map(Number), t = new Date(y, m - 1 + step, 1); return `${t.getFullYear()}-${pad2(t.getMonth() + 1)}`; };
+function calHTML(k, ym){
+  const [y, m] = ym.split("-").map(Number), latest = MAIN.asOf.slice(0, 7), first = (k.trail.length ? k.trail[0][0] : MAIN.asOf).slice(0, 7);
+  const byDay = Object.fromEntries(k.trail.map(([d, came, won]) => [d, { came, won }]));
+  const cells = Array.from({ length: new Date(y, m - 1, 1).getDay() }, () => `<i class="blank"></i>`);
+  let cameDays = 0, wonDays = 0;
+  for (let d = 1, last = new Date(y, m, 0).getDate(); d <= last; d++) {
+    const iso = `${ym}-${pad2(d)}`, { came = null, won = false } = byDay[iso] || {}, dow = new Date(y, m - 1, d).getDay();
+    const cls = [came === true && "y", came === false && "n", won && "c", iso > MAIN.asOf && "later", (dow === 0 || dow === 6) && "off", iso === MAIN.asOf && "now"].filter(Boolean).join(" ");
+    const say = [`${m}월 ${d}일`, came === true && "출석", came === false && "미출석", won && "챌린지 성공", iso === MAIN.asOf && "오늘"].filter(Boolean).join(", ");
+    cameDays += came === true; wonDays += won;
+    cells.push(`<i class="${cls}" title="${say}" aria-label="${say}">${d}</i>`);
+  }
+  const nav = (step, mark, label, off) => `<button class="calnav" type="button" data-ym="${shiftMonth(ym, step)}" aria-label="${label}" ${off ? "disabled" : ""}>${mark}</button>`;
+  return `<div class="calhead">${nav(-1, "‹", "이전 달", ym <= first)}<b>${y}년 ${m}월</b>${nav(1, "›", "다음 달", ym >= latest)}</div>
+    <div class="calgrid">${[..."일월화수목금토"].map(w => `<span>${w}</span>`).join("")}${cells.join("")}</div>
+    <div class="calsum">${m}월 출석 ${cameDays}일 · 챌린지 성공 ${wonDays}일</div>`;
+}
+$("#mine").addEventListener("click", e => {
+  const btn = e.target.closest(".calnav");
+  if (btn) { const box = btn.closest(".cal"); box.innerHTML = calHTML(FOUND[box.dataset.i], btn.dataset.ym); }
+});
+function mineHTML(k, i){
   const filled = k.key ? MAIN.goal : k.stamps;
   const st = Array.from({length: MAIN.goal}, (_,j) => `<span class="st ${j < filled ? "on" : j === MAIN.goal-1 ? "goal" : ""}">${j < filled ? STAMP_SVG : ""}</span>`).join("");
-  const trail = k.trail.length ? k.trail.map(([d, a, w]) => `<i class="${a ? "y" : ""} ${w ? "c" : ""}" title="${d}">${Number(d.slice(8))}</i>`).join("") : `<p class="empty">아직 수업 기록이 없어요</p>`;
   const LBL = { stamp: ["pass", "성공 · 스탬프 +1"], week: ["retry", "성공 · 같은 주라 스탬프는 이미 받음"], done: ["retry", "성공 · 이번 시즌 레벨업 완료, 다음 시즌부터 다시 모아요"], try: ["muted", "도전 · 다음엔 성공!"] };
   const stamps = k.stampList.length ? k.stampList.map(s => { const [c, t] = LBL[s.status] || LBL.stamp; return `<li><span>${s.kind ? `<span class="kchip" style="background:${kc(s.kind)}">${esc(s.kind)}</span>` : ""}${esc(s.what || "챌린지")} · <span class="${c}">${t}</span></span><span>${s.date.slice(5).replace("-", "/")}</span></li>`; }).join("") : `<li><span>이번 시즌 첫 스탬프를 기다리는 중</span><span></span></li>`;
   const plan = Number((k.planLabel.match(/\d+/) || [0])[0]);
@@ -358,7 +393,7 @@ function mineHTML(k){
     <div class="statrow"><div><b>${k.streak}</b><span>지금 연속 출석</span></div><div><b>${k.best}</b><span>최고 연속 출석</span></div><div><b>${k.monthAll ? k.monthAtt + "/" + k.monthAll : "–"}</b><span>이번 달 출석</span></div><div><b>${k.wins}</b><span>챌린지 성공 (6개월)</span></div></div>
     ${eventChart(k)}
     ${levelBoard(k)}
-    <section><h3>최근 수업</h3><div class="trail">${trail}</div><div class="legend">파란 칸 = 출석 · 빨간 테두리 = 챌린지 성공 · 숫자 = 날짜${plan ? ` · 주 ${plan}회를 채우면 연속 출석이 이어져요` : ""}</div></section>
+    <section><h3>출석 달력</h3><div class="cal" data-i="${i}">${calHTML(k, MAIN.asOf.slice(0, 7))}</div><div class="legend">파란 칸 = 출석 · 빨간 테두리 = 챌린지 성공 · 연한 빨강 = 미출석 · 점 = 오늘${plan ? ` · 주 ${plan}회를 채우면 연속 출석이 이어져요` : ""}</div></section>
     <section><h3>이번 시즌 챌린지</h3><div class="legend" style="margin:-4px 0 8px">스탬프는 일주일에 1개씩 모여요. 레벨업한 시즌에는 그 뒤 성공은 다음 시즌부터 다시 세요.</div><ul class="list">${stamps}</ul></section>
   </article>`;
 }
