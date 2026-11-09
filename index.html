@@ -107,14 +107,13 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 .card .name{font-family:var(--display);font-size:24px;line-height:1.15;overflow-wrap:anywhere}
 .card .cls{font-size:12px;color:var(--muted)}
 .lv{flex:none;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--mat-soft);color:var(--mat)}
-/* points bar: one cell per point the keyring needs; blue = 지난 시즌에서 이어 온 점수, red = 이번 시즌 점수, gold = 마지막 칸 */
-.pbar{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,24px));gap:4px;align-items:center}
-.pc{aspect-ratio:1;border-radius:6px;border:2px dashed var(--line)}
-.pc.goal{border-color:var(--gold)}
-.pc.on{border:2px solid var(--ink);background:var(--ink)}
-.pc.cy{border:2px solid var(--mat);background:var(--mat-soft)}
-.ptline{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 8px;font-size:12px;color:var(--muted)}
-.ptline b{font-family:var(--display);font-weight:400;font-size:18px;color:var(--fg)}
+/* stamp card (11/6 look): one stamp per point the next keyring needs; gold ring = last stamp */
+.stamps{display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,34px));gap:6px;align-items:center}
+.st{width:100%;aspect-ratio:1;max-width:100%;border-radius:50%;border:2px dashed var(--line);display:grid;place-items:center}
+.st.goal{border-color:var(--gold)}
+.st.on{border:2px solid var(--ink);background:var(--ink-soft);color:var(--ink);transform:rotate(-8deg)}
+.st.on svg{width:62%;height:62%}
+.stamphint{font-size:11px;color:var(--muted);margin-top:-6px}
 .stars{white-space:nowrap;letter-spacing:-.08em}
 .keytag{font-size:12px;font-weight:600;color:var(--gold);display:flex;align-items:center;gap:4px}
 .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;border-top:1px solid var(--line);padding-top:10px}
@@ -224,7 +223,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 .minehead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .minehead .name{font-family:var(--display);font-size:28px;line-height:1.15;overflow-wrap:anywhere}
 .minehead .cls{font-size:12px;color:var(--muted)}
-.pline{display:flex;flex-direction:column;gap:8px}
+.stampline{display:flex;flex-direction:column;gap:8px}
 .sheet .field input{background:var(--bg)}
 .finder form{display:flex;gap:8px}
 .finder form input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
@@ -388,14 +387,15 @@ $("#mine").addEventListener("click", e => {
   const btn = e.target.closest(".calnav");
   if (btn) { const box = btn.closest(".cal"); box.innerHTML = calHTML(FOUND[box.dataset.i], btn.dataset.ym); }
 });
-// one cell per point this season's keyring needs: blue = 이어 온 점수, red = 이번 시즌 점수, gold outline = 마지막 칸
-function pointsBar(k){
-  if (k.goal == null) return `<div class="keytag">올해 키링 6개 완성! 이번 시즌 ${k.pts}점</div>`;
-  const carried = Math.min(k.carry, k.goal), filled = Math.min(k.total, k.goal);
-  const cells = Array.from({length: k.goal}, (_, j) => `<span class="pc ${j < carried ? "cy" : j < filled ? "on" : j === k.goal - 1 ? "goal" : ""}"></span>`).join("");
-  const right = k.key ? `<span class="keytag">${esc(k.keyColor)} 키링 확정!</span>` : `<span>${esc(k.keyColor)} 키링까지 ${k.goal - k.total}점</span>`;
-  return `<div class="pline"><div class="pbar" style="--n:${k.goal}" role="img" aria-label="${esc(k.keyColor)} 키링 기준 ${k.goal}점 중 ${filled}점">${cells}</div>
-    <div class="ptline"><span>이번 시즌 <b>${k.pts}점</b>${k.carry ? ` + 이어 온 ${k.carry}점` : ""}</span>${right}</div></div>`;
+// stamp card (the 11/6 look): one stamp per point the next keyring needs, carried points included; gold ring = last stamp.
+// 4–6 stamps sit in one row, 8 and 10 in two rows.
+const STAMP_SVG = '<svg viewBox="0 0 24 24" fill="none"><path d="m6 12.5 4 4 8-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function stampLine(k){
+  if (k.goal == null) return `<div class="keytag">무지개 완성!</div>`;
+  const filled = Math.min(k.total, k.goal), cols = k.goal <= 6 ? k.goal : Math.ceil(k.goal / 2);
+  const st = Array.from({length: k.goal}, (_, j) => `<span class="st ${j < filled ? "on" : j === k.goal - 1 ? "goal" : ""}">${j < filled ? STAMP_SVG : ""}</span>`).join("");
+  return `<div class="stampline"><div class="stamps" style="--n:${cols}" role="img" aria-label="다음 키링까지 ${filled}점 / ${k.goal}점">${st}</div>
+    ${k.key ? `<div class="keytag">이번 시즌 레벨업! → ${esc(k.keyColor)}</div>` : `<div class="stamphint">레벨업까지 ${k.goal - k.total}점${k.carry ? ` · 지난 시즌에서 ${k.carry}점 이어옴` : ""}</div>`}</div>`;
 }
 function mineHTML(k, i){
   const LBL = { pts: s => ["pass", `+${s.stars}점`], week: () => ["retry", "이번 주는 가장 높은 별 1개만 점수"], try: () => ["muted", "도전 · 다음엔 성공!"] };
@@ -404,7 +404,7 @@ function mineHTML(k, i){
   const bestNote = k.bestIsNow ? "한 시즌 최고 · 이번 시즌 기록!" : `한 시즌 최고${k.bestSeason ? " · " + esc(k.bestSeason.slice(5)) : ""}`;
   return `<article class="mine">
     <header class="minehead"><div><div class="name">${esc(k.name)}</div><div class="cls">${esc(k.cls || "반 미정")}${k.planLabel ? `<span class="plan">${esc(k.planLabel)}</span>` : ""}</div></div>${k.lv ? `<span class="lv ${LV_CLASS[k.lv] || ""}">${esc(k.lv)}</span>` : ""}</header>
-    ${pointsBar(k)}
+    ${stampLine(k)}
     ${keyHero(k)}
     <div class="statrow"><div><b>${k.pts}점</b><span>이번 시즌 점수</span></div><div class="pr"><b>${k.bestPts}점</b><span>${bestNote}</span></div><div><b>${k.streak}</b><span>지금 연속 출석</span></div><div><b>${k.best}</b><span>최고 연속 출석</span></div><div><b>${k.monthAll ? k.monthAtt + "/" + k.monthAll : "–"}</b><span>이번 달 출석</span></div><div><b>${k.wins}</b><span>챌린지 성공 (6개월)</span></div></div>
     ${eventChart(k)}
