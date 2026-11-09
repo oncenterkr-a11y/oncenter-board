@@ -107,13 +107,15 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 .card .name{font-family:var(--display);font-size:24px;line-height:1.15;overflow-wrap:anywhere}
 .card .cls{font-size:12px;color:var(--muted)}
 .lv{flex:none;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--mat-soft);color:var(--mat)}
-.stamps{display:grid;grid-template-columns:repeat(5,minmax(0,34px));gap:6px;align-items:center}
-.st{width:100%;aspect-ratio:1;max-width:100%;border-radius:50%;border:2px dashed var(--line);display:grid;place-items:center}
-.st.goal{border-color:var(--gold)}
-.st.bonus{border-style:dotted}
-.st.on{border:2px solid var(--ink);background:var(--ink-soft);color:var(--ink);transform:rotate(-8deg)}
-.st.on svg{width:62%;height:62%}
-.stamphint{font-size:11px;color:var(--muted);margin-top:-6px}
+/* points bar: one cell per point the keyring needs; blue = 지난 시즌에서 이어 온 점수, red = 이번 시즌 점수, gold = 마지막 칸 */
+.pbar{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,24px));gap:4px;align-items:center}
+.pc{aspect-ratio:1;border-radius:6px;border:2px dashed var(--line)}
+.pc.goal{border-color:var(--gold)}
+.pc.on{border:2px solid var(--ink);background:var(--ink)}
+.pc.cy{border:2px solid var(--mat);background:var(--mat-soft)}
+.ptline{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 8px;font-size:12px;color:var(--muted)}
+.ptline b{font-family:var(--display);font-weight:400;font-size:18px;color:var(--fg)}
+.stars{white-space:nowrap;letter-spacing:-.08em}
 .keytag{font-size:12px;font-weight:600;color:var(--gold);display:flex;align-items:center;gap:4px}
 .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;border-top:1px solid var(--line);padding-top:10px}
 .nums div{display:flex;flex-direction:column}
@@ -156,6 +158,8 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 .statrow div{background:var(--sunken);border-radius:12px;padding:10px 12px}
 .statrow b{font-family:var(--display);font-weight:400;font-size:24px;display:block}
 .statrow span{font-size:12px;color:var(--muted)}
+.statrow .pr{box-shadow:inset 0 0 0 2px var(--gold-soft)}
+.statrow .pr b{color:var(--gold)}
 /* yearly keyring board: six 2-month seasons; earned keyrings take the 레벨 업! colors in order */
 .keys{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
 @media (max-width:420px){.keys{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -185,6 +189,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 .stages svg{width:36px;height:36px;flex:none}
 .stages b{display:block;font-size:14px}
 .stages span{display:block;font-size:12px;color:var(--muted)}
+.stages .need{margin-left:auto;flex:none;font-style:normal;font-family:var(--display);font-size:18px;color:var(--gold);white-space:nowrap}
 .lv.lv-white{background:#F7F7F2;color:#4a4a44;box-shadow:inset 0 0 0 1px #cfcfc6}
 .lv.lv-yellow{background:#F5C518;color:#4d3b00}
 .lv.lv-orange{background:#FF8A00;color:#fff}
@@ -219,7 +224,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 .minehead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .minehead .name{font-family:var(--display);font-size:28px;line-height:1.15;overflow-wrap:anywhere}
 .minehead .cls{font-size:12px;color:var(--muted)}
-.stampline{display:flex;flex-direction:column;gap:8px}
+.pline{display:flex;flex-direction:column;gap:8px}
 .sheet .field input{background:var(--bg)}
 .finder form{display:flex;gap:8px}
 .finder form input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
@@ -256,6 +261,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 
   <div class="tab" id="tabRank">
     <div class="boards">
+    <section class="board"><h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="m12 3 2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/></svg>이번 시즌 점수 TOP 3</h2><div class="sub">성공한 난이도(⭐ 1 · ⭐⭐ 2 · ⭐⭐⭐ 3)로 이번 시즌에 모은 점수</div><ol class="rank" id="rSeason"></ol></section>
     <section class="board"><h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4 0-6 1-9z" fill="var(--ink)"/></svg>연속 출석 TOP 3</h2><div class="sub">주말은 빼고 세요. 주 5회반은 평일 매일, 주 3회반은 주 3번 나오면 이어져요</div><ol class="rank" id="rStreak"></ol></section>
     <section class="board"><h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="var(--ink-soft)" stroke="var(--ink)" stroke-width="2"/><path d="m8 12 3 3 5-6" stroke="var(--ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>챌린지 성공 TOP 3</h2><div class="sub">최근 6개월 누적 성공 횟수</div><ol class="rank" id="rChal"></ol></section>
     </div>
@@ -276,9 +282,9 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
   </div>
 
   <div class="tab" id="tabRules" hidden>
-    <section class="board"><h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="8" r="5" stroke="var(--gold)" stroke-width="2.4"/><path d="m11.5 11.5 8 8M16 16l2-2M18.5 18.5l2-2" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/></svg>스탬프 규칙</h2>
+    <section class="board"><h2><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="8" r="5" stroke="var(--gold)" stroke-width="2.4"/><path d="m11.5 11.5 8 8M16 16l2-2M18.5 18.5l2-2" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/></svg>점수 규칙</h2>
       <ul class="rules" id="rules"></ul></section>
-    <section class="board stagebox"><h2>키링 6단계, 이런 뜻이에요</h2><div class="sub">스탬프 5개를 모을 때마다 다음 색 키링으로 레벨업! 시즌 안에 못 채워도 다음 시즌에 이어서 모을 수 있어요.</div><ul class="stages wide" id="stages"></ul></section>
+    <section class="board stagebox"><h2>키링 6단계, 이런 뜻이에요</h2><div class="sub">시즌(2개월)마다 오른쪽 점수를 모으면 다음 색 키링을 받아요. 못 채운 점수는 다음 시즌으로 이어지고, 1년에 6개를 모으면 무지개 완성!</div><ul class="stages wide" id="stages"></ul></section>
   </div>
 </div>
 <nav class="tabbar" id="tabbar" hidden aria-label="보드 메뉴">
@@ -290,9 +296,11 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 
 <script>
 const API = "https://oncenter-board.oncenter-b8f1dd.workers.dev";
-const STAMP_SVG = '<svg viewBox="0 0 24 24" fill="none"><path d="m6 12.5 4 4 8-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const starText = n => "⭐".repeat(Math.max(0, Math.min(3, n || 0)));
+// 조사 '으로/로': 받침이 있으면(ㄹ 받침 제외) '으로' (흰색으로, 노랑으로, 무지개로)
+const ro = w => { const s = String(w || ""), c = s.charCodeAt(s.length - 1) - 0xAC00, jong = c >= 0 && c <= 11171 ? c % 28 : 0; return s + (jong && jong !== 8 ? "으로" : "로"); };
 async function call(path, body){
   const res = await fetch(API + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   return { status: res.status, data: await res.json().catch(() => ({})) };
@@ -330,14 +338,15 @@ function showBoard(){
   const m = asOf.getMonth() + 1, sm = m - ((m - 1) % 2);
   const end = new Date(asOf.getFullYear(), sm + 1, 0);
   const left = Math.round((end - asOf) / 864e5);
-  $("#season").innerHTML = `<div class="ring"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="2.4"/><path d="m11.5 11.5 8 8M16 16l2-2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div><div><b>${sm}–${sm+1}월 시즌</b><span>시즌 마감 ${left <= 0 ? "오늘" : "D-" + left} · 스탬프 ${MAIN.goal}개 모으면 레벨업</span></div>`;
+  $("#season").innerHTML = `<div class="ring"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="2.4"/><path d="m11.5 11.5 8 8M16 16l2-2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div><div><b>${sm}–${sm+1}월 시즌</b><span>시즌 마감 ${left <= 0 ? "오늘" : "D-" + left} · 기준 점수를 모으면 키링</span></div>`;
   $("#asOf").textContent = `${m}월 ${asOf.getDate()}일 기록 기준 · 매일 한 번 업데이트돼요`;
   const rank = (el, list, val, unit, emptyMsg) => {
     $(el).innerHTML = list.length ? list.map((k,i) => `<li><span class="no">${i+1}</span><span class="nm">${esc(k.name)}</span><span class="val">${val(k)}<small>${unit}</small></span></li>`).join("") : `<p class="empty">${emptyMsg}</p>`;
   };
+  rank("#rSeason", MAIN.season || [], k => k.pts, "점", "아직 이번 시즌 점수가 없어요");
   rank("#rStreak", MAIN.streak, k => k.streak, "회", "아직 출석 기록이 없어요");
   rank("#rChal", MAIN.wins, k => k.wins, "번", "아직 챌린지 성공 기록이 없어요");
-  $("#rules").innerHTML = `<li>주 1회 챌린지에 성공하면 <b>스탬프 1개</b></li><li><b>연속 출석</b>은 챌린지와 따로, 주말을 빼고 세요. 주 5회반은 평일을 하루라도 빠지면, 주 3회반은 그 주에 3번을 못 채우면 처음부터 다시 세요</li><li>스탬프 <b>${MAIN.goal}개</b>를 모으면 <b>레벨업!</b> 다음 색 키링을 받아요</li><li>시즌 안에 다 못 모아도 괜찮아요. <b>다음 시즌에 이어서</b> 모아요</li><li>레벨업은 <b>한 시즌에 한 단계만!</b> 5개든 8개든 한 단계 올라가요</li><li>레벨업하면 스탬프는 0개가 되고, 다음 시즌에 처음부터 다시 모아요 (남는 스탬프는 이어지지 않아요)</li>`;
+  $("#rules").innerHTML = `<li>챌린지에 성공하면 성공한 난이도만큼 점수! <b>⭐ 1점 · ⭐⭐ 2점 · ⭐⭐⭐ 3점</b></li><li>한 주에 <b>가장 높은 별 1개</b>만 점수가 돼요. 같은 주에 여러 번 성공하면 가장 높은 별만 세요</li><li>시즌(2개월)에 모은 점수가 <b>키링 기준</b>을 채우면 다음 색 키링! 기준 점수는 아래 키링 6단계에 있어요</li><li>못 채운 점수는 <b>다음 시즌으로 이어져요</b></li><li>키링은 <b>한 시즌에 한 단계만!</b> 키링을 받으면 넘친 점수는 버리고, 다음 시즌에 0점부터 다시 모아요</li><li>새해가 되면 0점, 흰색부터 다시 시작해요</li><li><b>연속 출석</b>은 챌린지와 따로, 주말을 빼고 세요. 주 5회반은 평일을 하루라도 빠지면, 주 3회반은 그 주에 3번을 못 채우면 처음부터 다시 세요</li>`;
   $("#stages").innerHTML = stageList();
   showMine();
   $("#lockView").hidden = true; $("#boardView").hidden = false; $("#tabbar").hidden = false;
@@ -379,22 +388,29 @@ $("#mine").addEventListener("click", e => {
   const btn = e.target.closest(".calnav");
   if (btn) { const box = btn.closest(".cal"); box.innerHTML = calHTML(FOUND[box.dataset.i], btn.dataset.ym); }
 });
+// one cell per point this season's keyring needs: blue = 이어 온 점수, red = 이번 시즌 점수, gold outline = 마지막 칸
+function pointsBar(k){
+  if (k.goal == null) return `<div class="keytag">올해 키링 6개 완성! 이번 시즌 ${k.pts}점</div>`;
+  const carried = Math.min(k.carry, k.goal), filled = Math.min(k.total, k.goal);
+  const cells = Array.from({length: k.goal}, (_, j) => `<span class="pc ${j < carried ? "cy" : j < filled ? "on" : j === k.goal - 1 ? "goal" : ""}"></span>`).join("");
+  const right = k.key ? `<span class="keytag">${esc(k.keyColor)} 키링 확정!</span>` : `<span>${esc(k.keyColor)} 키링까지 ${k.goal - k.total}점</span>`;
+  return `<div class="pline"><div class="pbar" style="--n:${k.goal}" role="img" aria-label="${esc(k.keyColor)} 키링 기준 ${k.goal}점 중 ${filled}점">${cells}</div>
+    <div class="ptline"><span>이번 시즌 <b>${k.pts}점</b>${k.carry ? ` + 이어 온 ${k.carry}점` : ""}</span>${right}</div></div>`;
+}
 function mineHTML(k, i){
-  const filled = k.key ? MAIN.goal : k.stamps;
-  const st = Array.from({length: MAIN.goal}, (_,j) => `<span class="st ${j < filled ? "on" : j === MAIN.goal-1 ? "goal" : ""}">${j < filled ? STAMP_SVG : ""}</span>`).join("");
-  const LBL = { stamp: ["pass", "성공 · 스탬프 +1"], week: ["retry", "성공 · 같은 주라 스탬프는 이미 받음"], done: ["retry", "성공 · 이번 시즌 레벨업 완료, 다음 시즌부터 다시 모아요"], try: ["muted", "도전 · 다음엔 성공!"] };
-  const stamps = k.stampList.length ? k.stampList.map(s => { const [c, t] = LBL[s.status] || LBL.stamp; return `<li><span>${s.kind ? `<span class="kchip" style="background:${kc(s.kind)}">${esc(s.kind)}</span>` : ""}${esc(s.what || "챌린지")} · <span class="${c}">${t}</span></span><span>${s.date.slice(5).replace("-", "/")}</span></li>`; }).join("") : `<li><span>이번 시즌 첫 스탬프를 기다리는 중</span><span></span></li>`;
+  const LBL = { pts: s => ["pass", `+${s.stars}점`], week: () => ["retry", "이번 주는 가장 높은 별 1개만 점수"], try: () => ["muted", "도전 · 다음엔 성공!"] };
+  const chal = k.chalList.length ? k.chalList.map(s => { const [c, t] = (LBL[s.status] || LBL.pts)(s); return `<li><span>${s.kind ? `<span class="kchip" style="background:${kc(s.kind)}">${esc(s.kind)}</span>` : ""}${esc(s.what || "챌린지")}${s.stars ? ` · <span class="stars" aria-label="별 ${s.stars}개">${starText(s.stars)}</span>` : ""} · <span class="${c}">${t}</span></span><span>${s.date.slice(5).replace("-", "/")}</span></li>`; }).join("") : `<li><span>이번 시즌 첫 별을 기다리는 중</span><span></span></li>`;
   const plan = Number((k.planLabel.match(/\d+/) || [0])[0]);
+  const bestNote = k.bestIsNow ? "한 시즌 최고 · 이번 시즌 기록!" : `한 시즌 최고${k.bestSeason ? " · " + esc(k.bestSeason.slice(5)) : ""}`;
   return `<article class="mine">
     <header class="minehead"><div><div class="name">${esc(k.name)}</div><div class="cls">${esc(k.cls || "반 미정")}${k.planLabel ? `<span class="plan">${esc(k.planLabel)}</span>` : ""}</div></div>${k.lv ? `<span class="lv ${LV_CLASS[k.lv] || ""}">${esc(k.lv)}</span>` : ""}</header>
-    <div class="stampline"><div class="stamps" aria-label="다음 레벨까지 스탬프 ${filled}개 / ${MAIN.goal}개">${st}</div>
-    ${k.maxed ? `<div class="keytag">무지개 완성!</div>` : k.key ? `<div class="keytag">이번 시즌 레벨업! → ${STAGES[k.level - 1].color}</div>` : `<div class="stamphint">레벨업까지 ${MAIN.goal - k.stamps}개${k.carriedIn ? ` · 지난 시즌에서 ${k.carriedIn}개 이어옴` : ""}</div>`}</div>
+    ${pointsBar(k)}
     ${keyHero(k)}
-    <div class="statrow"><div><b>${k.streak}</b><span>지금 연속 출석</span></div><div><b>${k.best}</b><span>최고 연속 출석</span></div><div><b>${k.monthAll ? k.monthAtt + "/" + k.monthAll : "–"}</b><span>이번 달 출석</span></div><div><b>${k.wins}</b><span>챌린지 성공 (6개월)</span></div></div>
+    <div class="statrow"><div><b>${k.pts}점</b><span>이번 시즌 점수</span></div><div class="pr"><b>${k.bestPts}점</b><span>${bestNote}</span></div><div><b>${k.streak}</b><span>지금 연속 출석</span></div><div><b>${k.best}</b><span>최고 연속 출석</span></div><div><b>${k.monthAll ? k.monthAtt + "/" + k.monthAll : "–"}</b><span>이번 달 출석</span></div><div><b>${k.wins}</b><span>챌린지 성공 (6개월)</span></div></div>
     ${eventChart(k)}
-    ${levelBoard(k)}
+    ${yearBoard(k)}
     <section><h3>출석 달력</h3><div class="cal" data-i="${i}">${calHTML(k, MAIN.asOf.slice(0, 7))}</div><div class="legend">파란 칸 = 출석 · 빨간 테두리 = 챌린지 성공 · 연한 빨강 = 미출석 · 점 = 오늘${plan ? ` · 주 ${plan}회를 채우면 연속 출석이 이어져요` : ""}</div></section>
-    <section><h3>이번 시즌 챌린지</h3><div class="legend" style="margin:-4px 0 8px">스탬프는 일주일에 1개씩 모여요. 레벨업한 시즌에는 그 뒤 성공은 다음 시즌부터 다시 세요.</div><ul class="list">${stamps}</ul></section>
+    <section><h3>이번 시즌 챌린지</h3><div class="legend" style="margin:-4px 0 8px">성공한 난이도만큼 점수 (⭐ 1 · ⭐⭐ 2 · ⭐⭐⭐ 3). 한 주에 가장 높은 별 1개만 점수가 돼요.</div><ul class="list">${chal}</ul></section>
   </article>`;
 }
 function openEdit(){
@@ -458,17 +474,16 @@ const STAGES = [
 ];
 function keyHero(k){
   const n = k.level || 0, cur = n ? STAGES[n - 1] : null, nxt = n < STAGES.length ? STAGES[n] : null;
-  const left = Math.max(0, MAIN.goal - k.stamps);
-  const nextLine = !nxt ? "6단계를 모두 모았어요! 무지개 완성 🌈"
-    : k.key ? `이번 시즌 레벨업! 다음 시즌부터 <b>${nxt.color}</b>를 향해 다시 모아요`
-    : `스탬프 <b>${left}개</b> 더 모으면 <b>${nxt.color}</b>로 올라가요 (지금 ${k.stamps}/${MAIN.goal}${k.carriedIn ? `, 지난 시즌에서 ${k.carriedIn}개 이어옴` : ""})`;
+  const nextLine = !nxt ? "올해 키링 6개를 모두 모았어요! 무지개 완성 🌈"
+    : k.key ? `이번 시즌 달성! 다음 시즌에 <b>${MAIN.goals[n]}점</b>을 모으면 <b>${ro(nxt.color)}</b> 올라가요`
+    : `<b>${k.goal - k.total}점</b> 더 모으면 <b>${ro(nxt.color)}</b> 올라가요 (지금 ${k.total}/${k.goal}점${k.carry ? `, 지난 시즌에서 ${k.carry}점 이어옴` : ""})`;
   return `<section class="hero">
     <div class="hero-now">${keyIcon(cur ? cur.color : null)}<div><small>지금 내 키링</small><b>${cur ? `${cur.color} · ${cur.word}` : "아직 없어요"}</b><span>${cur ? esc(cur.say) : "첫 키링은 흰색(시작)부터!"}</span></div></div>
     ${nxt ? `<div class="hero-next"><div class="arrow" aria-hidden="true">→</div>${keyIcon(nxt.color)}<div><small>다음 키링</small><b>${nxt.color} · ${nxt.word}</b><span>${nextLine}</span></div></div>` : `<div class="hero-next"><span>${nextLine}</span></div>`}
   </section>`;
 }
 function stageList(){
-  return STAGES.map((st, i) => `<li>${keyIcon(st.color)}<div><b>${i + 1}단계 ${st.color} · ${st.word}</b><span>${esc(st.say)}</span></div></li>`).join("");
+  return STAGES.map((st, i) => `<li>${keyIcon(st.color)}<div><b>${i + 1}단계 ${st.color} · ${st.word}</b><span>${esc(st.say)}</span></div>${MAIN.goals[i] ? `<em class="need">${MAIN.goals[i]}점</em>` : ""}</li>`).join("");
 }
 const KEY_FILL = { "흰색": "#F7F7F2", "노랑": "#F5C518", "주황": "#FF8A00", "초록": "#2E9E5B", "파랑": "#2F6FE4", "무지개": "url(#rainbow)" };
 function keyIcon(color){
@@ -479,17 +494,18 @@ function keyIcon(color){
     <circle cx="20" cy="25" r="11" fill="${fill}" stroke="${stroke}" stroke-width="${color ? 1.5 : 2.2}" ${color ? "" : 'stroke-dasharray="3 3"'}/>
     ${color ? '<circle cx="20" cy="25" r="3.5" fill="#FF8A00" stroke="rgba(0,0,0,.25)"/>' : ""}</svg>`;
 }
-function levelBoard(k){
-  const n = k.level || 0;
-  const cells = STAGES.map((st, i) => {
-    const got = k.levels && k.levels[i];
-    const cls = got ? "got" : i === n ? "now" : "next";
-    const note = got ? `${got.season.slice(5)}<br>받음` : i === n ? `${k.key ? 0 : k.stamps}/${MAIN.goal}` : "";
-    return `<div class="kr ${cls}">${keyIcon(got ? st.color : null)}<b>${i + 1}단계 ${st.color}</b><span>${note}</span></div>`;
+// this year's six 2-month seasons: points, carried points and the keyring each season earned
+function yearBoard(k){
+  const cells = k.year.map(y => {
+    const cls = y.earned ? "got" : y.state === "now" ? "now" : y.state === "next" ? "next" : "miss";
+    const note = y.earned ? `${esc(y.color)} · ${y.total}점<br>${y.state === "now" && !y.given ? "키링 확정" : "받음"}`
+      : y.state === "now" ? (y.goal == null ? `${y.pts}점` : `${y.total}/${y.goal}점`)
+      : y.state === "next" ? "예정"
+      : y.total ? `${y.total}점<br>이어짐` : "–";
+    const say = `${y.m}–${y.m + 1}월 ${y.pts}점${y.carry ? ` (+이어 온 ${y.carry}점)` : ""}`;
+    return `<div class="kr ${cls}" title="${say}">${keyIcon(y.earned ? y.color : null)}<b>${y.m}–${y.m + 1}월</b><span>${note}</span></div>`;
   }).join("");
-  const hist = (k.history || []).slice().reverse().map(h => `<li><span>${esc(h.label)} · ${h.leveled ? `<span class="pass">${esc(h.color)} 레벨업!</span>` : `스탬프 ${h.gained}개 · 다음 시즌으로 이어짐`}</span><span>+${h.gained}</span></li>`).join("");
-  return `<section><h3>키링 단계 ${n}/${STAGES.length}</h3><div class="keys">${cells}</div><div class="legend">스탬프 ${MAIN.goal}개를 모을 때마다 한 단계씩 올라가요. 시즌 안에 못 채우면 다음 시즌에 이어서 모아요.</div></section>
-    ${hist ? `<section><h3>시즌별 기록</h3><ul class="list">${hist}</ul></section>` : ""}`;
+  return `<section><h3>${MAIN.asOf.slice(0, 4)}년 키링 ${k.level}/${STAGES.length}</h3><div class="keys">${cells}</div><div class="legend">시즌마다 기준 점수를 모으면 키링! 못 채운 점수는 다음 시즌으로 이어지고, 키링을 받으면 다시 0점부터 시작해요.</div></section>`;
 }
 const KIND_VAR = { "힘": "--k1", "스피드": "--k2", "민첩성": "--k3", "지구력": "--k4", "유연성": "--k5", "균형": "--k6", "기타": "--k7" };
 const kc = kd => `var(${KIND_VAR[kd] || "--k7"})`;
