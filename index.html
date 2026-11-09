@@ -69,6 +69,9 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
 .field label{font-size:13px;font-weight:600}
 .field input{width:100%;font:inherit;font-size:17px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .field input:focus{outline:3px solid var(--mat-soft);border-color:var(--mat)}
+.keep{display:flex;gap:10px;align-items:flex-start;text-align:left;font-size:15px;font-weight:600;cursor:pointer}
+.keep input{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--mat)}
+.keep small{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:2px}
 .go{border:0;background:var(--mat);color:#fff;border-radius:12px;padding:13px;font-size:16px;font-weight:600;cursor:pointer}
 .go:disabled{opacity:.6;cursor:wait}
 .err{color:var(--ink);font-size:14px;min-height:1.5em;margin:0}
@@ -245,6 +248,7 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--mat);outline-of
       <p>아이 이름과 비밀번호를 입력해 주세요.<br>처음 비밀번호는 on이에요.</p>
       <div class="field"><label for="who">이름</label><input id="who" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="홍길동" required></div>
       <div class="field"><label for="pw">비밀번호</label><input id="pw" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required></div>
+      <label class="keep"><input id="keep" type="checkbox"><span>내 폰이에요 · 로그인 유지<small>다른 사람 폰이면 체크하지 마세요. 체크하지 않으면 5분 동안 안 쓸 때 자동으로 로그아웃돼요.</small></span></label>
       <button class="go" id="goBtn" type="submit">들어가기</button>
       <p class="err" id="lockErr" role="alert"></p>
     </form>
@@ -307,11 +311,35 @@ async function call(path, body){
 
 // ---- sign-in: name + personal PIN opens that kid's record, which holds the key to the board ----
 let MAIN = null, FOUND = [], START_PIN = false, NICK_USED = false, LOGIN = null;
-// Kept only for this browser tab, so a refresh doesn't ask again.
-const store = { get(){ try { return JSON.parse(sessionStorage.getItem("oc-login") || "null"); } catch { return null; } },
-  set(v){ try { sessionStorage.setItem("oc-login", JSON.stringify(v)); } catch {} },
-  clear(){ try { sessionStorage.removeItem("oc-login"); sessionStorage.removeItem("oc-pw"); localStorage.removeItem("oc-pw"); } catch {} } };
-async function signIn(name, pin, quiet){
+// Where the sign-in is kept. By default (it may be someone else's phone) only in this tab, and it ends after IDLE_MS
+// without a touch — the time counts while the phone is locked or the app is in the background too. "내 폰이에요" keeps it
+// on this phone until KEEP_MS pass without a visit, or 로그아웃. Older saved sign-ins (no time stamp) are dropped.
+const IDLE_MS = 5 * 60 * 1000, KEEP_MS = 30 * 24 * 3600 * 1000;
+const store = {
+  get(){
+    try {
+      const k = JSON.parse(localStorage.getItem("oc-keep") || "null");
+      if (k && k.exp > Date.now()) return k;
+      const s = JSON.parse(sessionStorage.getItem("oc-login") || "null");
+      if (s && s.at && Date.now() - s.at < IDLE_MS) return s;
+    } catch {}
+    store.clear(); return null;
+  },
+  set(v){ try {
+    if (v.keep) localStorage.setItem("oc-keep", JSON.stringify({ name: v.name, pin: v.pin, keep: true, exp: Date.now() + KEEP_MS }));
+    else sessionStorage.setItem("oc-login", JSON.stringify({ name: v.name, pin: v.pin, at: Date.now() }));
+  } catch {} },
+  clear(){ try { ["oc-login", "oc-pw"].forEach(k => sessionStorage.removeItem(k)); ["oc-keep", "oc-pw"].forEach(k => localStorage.removeItem(k)); } catch {} } };
+let lastTouch = Date.now(), lastSaved = 0;
+function touched(){
+  lastTouch = Date.now();
+  if (LOGIN && !LOGIN.keep && lastTouch - lastSaved > 10000) { store.set(LOGIN); lastSaved = lastTouch; }
+}
+["pointerdown", "keydown", "touchstart", "scroll"].forEach(t => addEventListener(t, touched, { capture: true, passive: true }));
+function idleCheck(){ if (LOGIN && !LOGIN.keep && Date.now() - lastTouch >= IDLE_MS) logOut("5분 동안 쓰지 않아서 자동으로 로그아웃했어요."); }
+setInterval(idleCheck, 15000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) idleCheck(); });
+async function signIn(name, pin, quiet, keep){
   const btn = $("#goBtn"); btn.disabled = true; btn.textContent = "확인하는 중…"; $("#lockErr").textContent = "";
   try {
     const { status, data } = await call("/login", { name, pin });
@@ -321,15 +349,20 @@ async function signIn(name, pin, quiet){
       else $("#lockErr").textContent = "서버에 연결하지 못했어요. 잠시 후 다시 해 주세요.";
       return;
     }
-    MAIN = data.main; FOUND = data.cards; START_PIN = data.startPin; NICK_USED = data.nickUsed; LOGIN = { name, pin };
-    store.set(LOGIN); showBoard();
+    MAIN = data.main; FOUND = data.cards; START_PIN = data.startPin; NICK_USED = data.nickUsed; LOGIN = { name, pin, keep: !!keep };
+    store.set(LOGIN); lastTouch = lastSaved = Date.now(); showBoard();
   } catch {
     $("#lockErr").textContent = "서버에 연결하지 못했어요. 인터넷을 확인하고 다시 해 주세요.";
   } finally { btn.disabled = false; btn.textContent = "들어가기"; }
 }
-$("#lockForm").addEventListener("submit", e => { e.preventDefault(); const name = $("#who").value.trim(), pin = $("#pw").value.trim(); if (name && pin) signIn(name, pin); });
-$("#lockBtn").addEventListener("click", () => { store.clear(); MAIN = null; FOUND = []; LOGIN = null; $("#pw").value = ""; $("#mine").innerHTML = ""; $("#lookOut").innerHTML = ""; $("#lookQ").value = "";
-  $("#tabbar").hidden = true; $("#boardView").hidden = true; $("#lockView").hidden = false; });
+$("#lockForm").addEventListener("submit", e => { e.preventDefault(); const name = $("#who").value.trim(), pin = $("#pw").value.trim(); if (name && pin) signIn(name, pin, false, $("#keep").checked); });
+// Sign out: also clears the name, so the next person on this phone sees an empty form.
+function logOut(msg){
+  store.clear(); closeSheet(); MAIN = null; FOUND = []; LOGIN = null;
+  $("#who").value = ""; $("#pw").value = ""; $("#keep").checked = false; $("#mine").innerHTML = ""; $("#lookOut").innerHTML = ""; $("#lookQ").value = "";
+  $("#tabbar").hidden = true; $("#boardView").hidden = true; $("#lockView").hidden = false; $("#lockErr").textContent = msg || "";
+}
+$("#lockBtn").addEventListener("click", () => logOut());
 
 // ---- board ----
 function showBoard(){
@@ -433,7 +466,7 @@ document.addEventListener("submit", async e => {
   btn.disabled = true; msg.textContent = "바꾸는 중…";
   const WHY = { bad_pin: "새 비밀번호는 영문·숫자 4~20자로 적어 주세요.", bad_nick: "새 별명은 12자 이내로 적어 주세요.", nick_month: "별명은 한 달에 한 번만 바꿀 수 있어요.", nick_taken: "다른 친구가 쓰는 별명이에요. 다른 별명을 골라 주세요." };
   try {
-    const { status, data } = await call("/change", { ...LOGIN, newPin, newNick });
+    const { status, data } = await call("/change", { name: LOGIN.name, pin: LOGIN.pin, newPin, newNick });
     if (status === 200) {
       if (newPin) { LOGIN.pin = newPin; store.set(LOGIN); }
       FOUND = data.cards; START_PIN = data.startPin; NICK_USED = data.nickUsed; showMine();
@@ -451,7 +484,7 @@ $("#lookForm").addEventListener("submit", async e => {
   if (!query) return;
   btn.disabled = true; out.innerHTML = `<p class="empty">찾는 중…</p>`;
   try {
-    const { status, data } = await call("/lookup", { ...LOGIN, query });
+    const { status, data } = await call("/lookup", { name: LOGIN.name, pin: LOGIN.pin, query });
     if (status !== 200) out.innerHTML = `<p class="empty">찾지 못했어요. 다시 로그인해서 해 주세요.</p>`;
     else if (!data.found) out.innerHTML = `<p class="empty">그 친구를 찾지 못했어요. 이름이나 별명을 정확히 입력해 주세요.</p>`;
     else {
@@ -548,7 +581,7 @@ document.addEventListener("keydown", e => {
 });
 
 const saved = store.get();
-if (saved) signIn(saved.name, saved.pin, true);
+if (saved) signIn(saved.name, saved.pin, true, saved.keep);
 else $("#who").focus();
 </script>
 
